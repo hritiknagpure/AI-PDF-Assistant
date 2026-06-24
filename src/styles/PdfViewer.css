@@ -1,0 +1,67 @@
+/* PdfViewer.css */
+
+.info-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.86rem;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-list li:last-child {
+  border-bottom: none;
+}
+
+.info-list__label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.info-list__value {
+  font-weight: 600;
+  max-width: 62%;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-preview {
+  flex: 1;
+  min-height: 130px;
+  overflow-y: auto;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.text-preview__content {
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+.text-preview__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 110px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  text-align: center;
+}
