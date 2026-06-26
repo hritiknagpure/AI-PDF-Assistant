@@ -35,14 +35,161 @@
   white-space: nowrap;
 }
 
+/* ---- File list ---- */
+.file-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 168px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.file-list__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.file-list__item--active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.file-list__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+}
+
+.file-list__icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.file-list__info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.file-list__name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-list__meta {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-list__remove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: 6px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.file-list__remove:hover {
+  background: var(--danger, #e5484d);
+  color: #fff;
+}
+
+/* ---- Detail chips for the selected file ---- */
+.detail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.detail-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 0.74rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  max-width: 100%;
+}
+
+.detail-chip__label {
+  color: var(--text-muted);
+}
+
+.detail-chip__value {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
 .text-preview {
   flex: 1;
   min-height: 130px;
-  overflow-y: auto;
+  /* Always cap the height so long content scrolls instead of running off-screen. */
+  max-height: 48vh;
+  overflow: auto; /* both axes — scroll vertically, and for very wide lines */
   background: var(--bg-subtle);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 16px;
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* WebKit/Chromium scrollbar — make it clearly visible in both themes. */
+.text-preview::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.text-preview::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.text-preview::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--bg-subtle);
+}
+
+.text-preview::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 .text-preview__content {

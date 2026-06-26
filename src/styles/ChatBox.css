@@ -156,6 +156,41 @@
   height: 46px;
 }
 
+/* ---- Voice input (mic) ---- */
+.chat__mic {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  font-size: 1.15rem;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.chat__mic--active {
+  color: #fff;
+  background: var(--danger, #e5484d);
+  border-color: transparent;
+  animation: mic-pulse 1.3s infinite ease-in-out;
+}
+
+@keyframes mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(229, 72, 77, 0);
+  }
+}
+
+.chat__voice-error {
+  margin: 0;
+  padding: 8px 16px 0;
+  font-size: 0.82rem;
+  color: var(--danger, #e5484d);
+}
+
 /* ---- Typing indicator ---- */
 .typing-dot {
   display: inline-block;

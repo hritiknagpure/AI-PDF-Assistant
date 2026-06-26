@@ -60,8 +60,14 @@
   word-break: break-word;
 }
 
-.message__copy {
+.message__actions {
+  display: flex;
+  gap: 7px;
   margin-top: 9px;
+  flex-wrap: wrap;
+}
+
+.message__action {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
@@ -73,10 +79,106 @@
   transition: all 0.15s ease;
 }
 
-.message__copy:hover {
+.message__action:hover {
   background: var(--primary-soft);
   color: var(--primary);
   border-color: var(--primary);
+}
+
+.message__action--active {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* ---- Markdown rendering inside AI bubbles ---- */
+.message__markdown {
+  white-space: normal; /* let block elements control spacing */
+}
+
+.message__markdown > :first-child {
+  margin-top: 0;
+}
+
+.message__markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.message__markdown p {
+  margin: 0 0 8px;
+}
+
+.message__markdown ul,
+.message__markdown ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.message__markdown li {
+  margin: 2px 0;
+}
+
+.message__markdown h1,
+.message__markdown h2,
+.message__markdown h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 10px 0 6px;
+}
+
+.message__markdown a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.message__markdown code {
+  font-family: 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  font-size: 0.82em;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.message__markdown pre {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 0 0 8px;
+}
+
+.message__markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.message__markdown blockquote {
+  margin: 0 0 8px;
+  padding-left: 12px;
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-muted);
+}
+
+.message__markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 8px;
+  font-size: 0.85em;
+}
+
+.message__markdown th,
+.message__markdown td {
+  border: 1px solid var(--border);
+  padding: 5px 9px;
+  text-align: left;
+}
+
+.message__markdown th {
+  background: var(--bg-subtle);
+  font-weight: 600;
 }
 
 /* Loading bubble */

@@ -28,7 +28,25 @@
 }
 
 .panel--left {
-  overflow: hidden;
+  /* Scroll the left column internally so the bottom card is always reachable
+     even when uploader + file info + extracted content exceed the height. */
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.panel--left::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel--left::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+
+.panel--left::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 .panel--right {
@@ -44,6 +62,30 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ---- Short viewports: let the whole page scroll instead of clipping ----
+   Triggers when the window isn't tall enough for the fixed full-height layout
+   (small screens, high browser zoom, or Windows display scaling). */
+@media (max-height: 720px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .layout {
+    min-height: 0;
+  }
+
+  .panel--left {
+    overflow-y: visible;
+  }
+
+  .panel--right {
+    height: 78vh;
+    min-height: 480px;
   }
 }
 

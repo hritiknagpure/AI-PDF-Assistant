@@ -1,44 +1,63 @@
 import { useRef, useState } from 'react'
+import {
+  FILE_TYPES,
+  MAX_BYTES,
+  getExtension,
+  formatSize,
+} from '../services/fileService.js'
 import './../styles/PdfUploader.css'
 
 /**
- * Drag-and-drop / click PDF uploader.
+ * Drag-and-drop / click file uploader with a file-type dropdown.
+ *
+ * Supports PDF, CSV, text (.txt/.md/.log) and JSON. The dropdown narrows which
+ * type is accepted; "All supported files" accepts any of them.
  *
  * Props:
- *  - onFileSelected: (File) => void  called with a validated PDF File
- *  - isExtracting  : boolean         disables input while busy
+ *  - onFilesSelected: (File[]) => void  called with the validated files
+ *  - isExtracting   : boolean           disables input while busy
  */
-function PdfUploader({ onFileSelected, isExtracting }) {
+function PdfUploader({ onFilesSelected, isExtracting }) {
   const inputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
   const [localError, setLocalError] = useState('')
+  const [typeId, setTypeId] = useState('all')
 
-  /** Validate the candidate file before handing it upward. */
-  const validateAndSend = (file) => {
+  const activeType = FILE_TYPES.find((t) => t.id === typeId) ?? FILE_TYPES[0]
+
+  /**
+   * Validate a list of candidate files against the selected type, then send the
+   * valid ones up. Invalid ones are collected into a single error message.
+   */
+  const validateAndSend = (fileList) => {
     setLocalError('')
-    if (!file) return
+    const candidates = Array.from(fileList ?? [])
+    if (candidates.length === 0) return
 
-    const isPdf =
-      file.type === 'application/pdf' ||
-      file.name.toLowerCase().endsWith('.pdf')
+    const valid = []
+    const rejected = []
 
-    if (!isPdf) {
-      setLocalError('Please upload a .pdf file.')
-      return
+    for (const file of candidates) {
+      const ext = getExtension(file.name)
+      if (!activeType.exts.includes(ext)) {
+        rejected.push(`${file.name} (wrong type)`)
+      } else if (file.size > MAX_BYTES) {
+        rejected.push(`${file.name} (too large)`)
+      } else {
+        valid.push(file)
+      }
     }
 
-    // Guard against very large files (50 MB) to keep the browser responsive.
-    const MAX_BYTES = 50 * 1024 * 1024
-    if (file.size > MAX_BYTES) {
-      setLocalError('File is too large (max 50 MB).')
-      return
+    if (rejected.length > 0) {
+      setLocalError(`Skipped: ${rejected.join(', ')}.`)
     }
-
-    onFileSelected(file)
+    if (valid.length > 0) {
+      onFilesSelected(valid)
+    }
   }
 
   const handleInputChange = (e) => {
-    validateAndSend(e.target.files?.[0])
+    validateAndSend(e.target.files)
     // Reset so selecting the same file again still fires onChange.
     e.target.value = ''
   }
@@ -47,12 +66,32 @@ function PdfUploader({ onFileSelected, isExtracting }) {
     e.preventDefault()
     setIsDragging(false)
     if (isExtracting) return
-    validateAndSend(e.dataTransfer.files?.[0])
+    validateAndSend(e.dataTransfer.files)
   }
 
   return (
     <div className="card">
-      <h2 className="card__title">Upload PDF</h2>
+      <h2 className="card__title">Upload File</h2>
+
+      {/* ---- File-type selector ---- */}
+      <label className="uploader__type">
+        <span className="uploader__type-label">File type</span>
+        <select
+          className="uploader__select"
+          value={typeId}
+          onChange={(e) => {
+            setTypeId(e.target.value)
+            setLocalError('')
+          }}
+          disabled={isExtracting}
+        >
+          {FILE_TYPES.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <div
         className={`dropzone ${isDragging ? 'dropzone--active' : ''} ${
@@ -76,8 +115,9 @@ function PdfUploader({ onFileSelected, isExtracting }) {
         <input
           ref={inputRef}
           type="file"
-          accept="application/pdf,.pdf"
+          accept={activeType.accept}
           onChange={handleInputChange}
+          multiple
           hidden
           disabled={isExtracting}
         />
@@ -87,10 +127,12 @@ function PdfUploader({ onFileSelected, isExtracting }) {
         </span>
         <p className="dropzone__text">
           {isExtracting
-            ? 'Extracting text…'
-            : 'Drag & drop a PDF here, or click to browse'}
+            ? 'Reading files…'
+            : 'Drag & drop files here, or click to browse'}
         </p>
-        <p className="dropzone__hint">Max 50 MB · text-based PDFs only</p>
+        <p className="dropzone__hint">
+          Max {formatSize(MAX_BYTES)} · {activeType.hint}
+        </p>
       </div>
 
       {localError && <p className="form-error">{localError}</p>}

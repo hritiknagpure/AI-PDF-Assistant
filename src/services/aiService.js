@@ -87,6 +87,39 @@ export function retrieveRelevantChunks(query, context, topK = 3) {
   return scored.slice(0, topK)
 }
 
+/**
+ * Multi-file retrieval: score paragraphs across every loaded file and return
+ * the best ones overall, each tagged with the file it came from (for citations).
+ *
+ * @param {string} query
+ * @param {Array<{ name: string, text: string }>} files
+ * @param {number} topK
+ * @returns {Array<{ text: string, score: number, source: string }>}
+ */
+export function retrieveAcrossFiles(query, files, topK = 4) {
+  const queryTokens = tokenize(query)
+  const rawQuery = query.toLowerCase().trim()
+
+  const scored = []
+  for (const file of files) {
+    if (!file?.text) continue
+    for (const text of splitIntoParagraphs(file.text)) {
+      const score = scoreParagraph(text, queryTokens, rawQuery)
+      if (score > 0) scored.push({ text, score, source: file.name })
+    }
+  }
+
+  return scored.sort((a, b) => b.score - a.score).slice(0, topK)
+}
+
+/** Combine all files into one labelled text block (for summaries / fallback). */
+function combineFilesText(files) {
+  return files
+    .filter((f) => f?.text)
+    .map((f) => `=== ${f.name} ===\n${f.text}`)
+    .join('\n\n')
+}
+
 // ---------------------------------------------------------------------------
 // LLM configuration.
 //
@@ -115,26 +148,27 @@ const OPENAI_URL = `${BASE_URL}/chat/completions`
  * @returns {Promise<string>} the model's answer
  * @throws if the API key is missing or the request fails
  */
-export async function askOpenAI(question, context) {
+export async function askOpenAI(question, files) {
   if (!OPENAI_API_KEY) {
     throw new Error('Missing VITE_OPENAI_API_KEY')
   }
 
-  // Try to retrieve the most relevant chunks (keeps the prompt small & cheap).
-  const chunks = retrieveRelevantChunks(question, context, 5)
+  // Retrieve the most relevant chunks across ALL files (keeps the prompt small).
+  const chunks = retrieveAcrossFiles(question, files, 5)
 
   // Cap how much text we send so we stay within free-tier token limits.
   const MAX_CONTEXT_CHARS = 12000
 
   let grounding
   if (chunks.length > 0) {
-    // We found relevant passages — use them (this is the RAG path).
-    grounding = chunks.map((c, i) => `[${i + 1}] ${c.text}`).join('\n\n')
+    // We found relevant passages — use them, labelled with their source file.
+    grounding = chunks
+      .map((c, i) => `[${i + 1}] (from "${c.source}") ${c.text}`)
+      .join('\n\n')
   } else {
     // No keyword match (common for "summarize" or broad questions):
-    // fall back to sending the actual document text so the AI has something
-    // real to work with instead of empty context.
-    grounding = context.slice(0, MAX_CONTEXT_CHARS)
+    // fall back to the combined document text so the AI has real context.
+    grounding = combineFilesText(files).slice(0, MAX_CONTEXT_CHARS)
   }
 
   // Final safety truncation in case the joined chunks are very large.
@@ -143,12 +177,14 @@ export async function askOpenAI(question, context) {
   }
 
   const systemPrompt =
-    'You are a helpful assistant that answers questions about the user\'s PDF ' +
-    'using the provided document text. Base your answer on that text. If the ' +
-    'answer truly is not present, say so briefly. Be clear and concise.'
+    'You are a helpful assistant that answers questions about the user\'s ' +
+    'uploaded files using the provided document text. Base your answer on that ' +
+    'text. When relevant, cite which file the information came from (the file ' +
+    'name is given in parentheses before each excerpt). If the answer truly is ' +
+    'not present, say so briefly. Use Markdown formatting. Be clear and concise.'
 
   const userPrompt =
-    `Document text:\n${grounding || '(the document appears to be empty)'}\n\n` +
+    `Document excerpts:\n${grounding || '(the documents appear to be empty)'}\n\n` +
     `Question: ${question}`
 
   const { data } = await axios.post(
@@ -183,15 +219,16 @@ export async function askOpenAI(question, context) {
  * @param {string} context - extracted PDF text
  * @returns {Promise<string>}
  */
-export async function answerQuestion(question, context) {
-  if (!context || !context.trim()) {
-    return 'Please upload a PDF first so I have something to read.'
+export async function answerQuestion(question, files) {
+  const loaded = (files ?? []).filter((f) => f?.text?.trim())
+  if (loaded.length === 0) {
+    return 'Please upload a file first so I have something to read.'
   }
 
   // ---- Path 1: real GPT answer via Axios (when a key is configured) ----
   if (OPENAI_API_KEY) {
     try {
-      return await askOpenAI(question, context)
+      return await askOpenAI(question, loaded)
     } catch (err) {
       // Surface useful info, then gracefully fall back to local retrieval.
       const status = err.response?.status
@@ -204,18 +241,21 @@ export async function answerQuestion(question, context) {
   // ---- Path 2: local simulated RAG (no key, or API failed) ----
   return new Promise((resolve) => {
     setTimeout(() => {
-      const matches = retrieveRelevantChunks(question, context, 3)
+      const matches = retrieveAcrossFiles(question, loaded, 3)
 
       if (matches.length === 0) {
         resolve(
-          "I couldn't find anything relevant to that in the document. " +
+          "I couldn't find anything relevant to that in your files. " +
             'Try rephrasing your question or using different keywords.'
         )
         return
       }
 
-      const passages = matches.map((m, i) => `${i + 1}. ${m.text}`).join('\n\n')
-      resolve(`Here's what I found in the document:\n\n${passages}`)
+      // Cite the source file for each passage (rendered as Markdown).
+      const passages = matches
+        .map((m, i) => `${i + 1}. *(from **${m.source}**)* ${m.text}`)
+        .join('\n\n')
+      resolve(`Here's what I found in your files:\n\n${passages}`)
     }, 700) // simulate "thinking" latency
   })
 }
@@ -227,12 +267,15 @@ export async function answerQuestion(question, context) {
  * @param {string} context
  * @returns {Promise<string>}
  */
-export function summarizePdf(context) {
+export function summarizePdf(files) {
+  const context = combineFilesText(files ?? [])
+  const fileCount = (files ?? []).filter((f) => f?.text?.trim()).length
+
   return new Promise((resolve) => {
     setTimeout(() => {
       const paragraphs = splitIntoParagraphs(context)
       if (paragraphs.length === 0) {
-        resolve('There is not enough text in this PDF to summarize.')
+        resolve('There is not enough text in your files to summarize.')
         return
       }
 
@@ -254,10 +297,15 @@ export function summarizePdf(context) {
       const top = scored
         .sort((a, b) => b.score - a.score)
         .slice(0, 4)
-        .map((p, i) => `• ${p.text}`)
+        .map((p) => `- ${p.text}`)
         .join('\n\n')
 
-      resolve(`📌 Summary (key points):\n\n${top}`)
+      const heading =
+        fileCount > 1
+          ? `**Summary (key points across ${fileCount} files):**`
+          : '**Summary (key points):**'
+
+      resolve(`📌 ${heading}\n\n${top}`)
     }, 800)
   })
 }
