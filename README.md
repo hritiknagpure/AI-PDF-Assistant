@@ -155,3 +155,4 @@ await axios.post(
 - Text extraction works on **text-based PDFs**. Scanned/image-only PDFs contain
   no selectable text and will return an empty result (OCR is out of scope).
 - Maximum upload size is capped at **50 MB** to keep the browser responsive.
+# AI-PDF-Assistant
